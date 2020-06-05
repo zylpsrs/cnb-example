@@ -20,7 +20,7 @@ fi
 echo "---> Installing pip"
 pip_layer_dir="$layers_dir/pip"
 #pypi_get_pip_url=https://bootstrap.pypa.io/get-pip.py
-pypi_get_pip_url=http://soft.ocp.zyl.io/soft/get-pip.py
+pypi_get_pip_url=http://172.17.0.1/soft/get-pip.py
 pypi_index_url=$(cat $plan_path | yj -t | jq -r '.entries[] | select(.name == "pip") | .metadata.index_url')
 
 if [[ ! -f $pip_layer_dir/bin/pip ]]; then

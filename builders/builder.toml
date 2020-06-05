@@ -32,6 +32,6 @@ id = "sample/python"
 
 [stack]
 id = "io.cnb.samples.stacks.groovy"
-run-image = "registry.ocp.zyl.io:5000/cnb-example-run:groovy"
-build-image = "registry.ocp.zyl.io:5000/cnb-example-build:groovy"
-run-image-mirrors = ["registry.ocp.zyl.io:5000/cnb-example-run:groovy"]
+run-image = "cnb-example-run:groovy"
+build-image = "cnb-example-build:groovy"
+#run-image-mirrors = ["registry.ocp.zyl.io:5000/cnb-example-run:groovy"]

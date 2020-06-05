@@ -10,11 +10,11 @@ bud-base:
 	docker build -f base/Dockerfile -t $(BASE_IMAGE) base
 
 bud-build:
-	docker build -f build/Dockerfile -t $(BASE_IMAGE) \
+	docker build -f build/Dockerfile -t $(BUILD_IMAGE) \
 		--build-arg "base_image=${BASE_IMAGE}" --build-arg "stack_id=${CNB_STACK_ID}" build
 
 bud-run:
-	docker build -f run/Dockerfile -t $(BASE_IMAGE) \
+	docker build -f run/Dockerfile -t $(RUN_IMAGE) \
 		--build-arg "base_image=${BASE_IMAGE}" --build-arg "stack_id=${CNB_STACK_ID}" run
 
 bud:
@@ -24,5 +24,3 @@ bud:
 
 all:
 	make bud
-	make push
-	make load
