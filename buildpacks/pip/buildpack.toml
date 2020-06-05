@@ -1,0 +1,18 @@
+# Buildpack API version
+api = "0.2"
+
+# Buildpack ID and metadata
+[buildpack]
+id = "sample/pip"
+name = "Python Pip Buildpack"
+version = "0.0.1"
+
+# Stacks that the buildpack will work with
+[[stacks]]
+id = "heroku-18"
+
+[[stacks]]
+id = "org.cloudfoundry.stacks.cflinuxfs3"
+
+[[stacks]]
+id = "io.cnb.samples.stacks.groovy"

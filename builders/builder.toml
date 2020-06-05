@@ -1,0 +1,37 @@
+description = "Ubuntu groovy base image with buildpacks for Python and Ruby"
+
+[[buildpacks]]
+id = "sample/ruby-bundler"
+uri = "../buildpacks/ruby-bundler"
+version = "0.0.1"
+
+[[buildpacks]]
+id = "sample/python"
+uri = "../buildpacks/python"
+version = "0.0.1"
+
+[[buildpacks]]
+id = "sample/pip"
+uri = "../buildpacks/pip"
+version = "0.0.1"
+
+[[order]]
+[[order.group]]
+id = "sample/ruby-bundler"
+
+[[order]]
+[[order.group]]
+id = "sample/python"
+
+[[order.group]]
+id = "sample/pip"
+
+[[order]]
+[[order.group]]
+id = "sample/python"
+
+[stack]
+id = "io.cnb.samples.stacks.groovy"
+run-image = "registry.ocp.zyl.io:5000/cnb-example-run:groovy"
+build-image = "registry.ocp.zyl.io:5000/cnb-example-build:groovy"
+run-image-mirrors = ["registry.ocp.zyl.io:5000/cnb-example-run:groovy"]

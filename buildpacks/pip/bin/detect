@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+# 1. CHECK IF APPLICABLE 
+if [[ ! -f requirements.txt ]]; then
+   exit 100
+fi
+
+# 2. GET ARGS
+plan_path=$2
+
+# 3. GET CONFIGURATION
+pypi_index_url=https://mirrors.aliyun.com/pypi/simple
+if [[ -f .pip-index-url ]]; then
+    pypi_index_url=$(cat .pip-index-url | tr -d '[:space:]')
+fi
+
+# 3. DECLARE DEPENDENCIES
+cat >> "${plan_path}" <<EOL
+[[provides]]
+name = "pip"
+
+[[requires]]
+name = "pip"
+
+[requires.metadata]
+index_url = "$pypi_index_url"
+
+[[requires]]
+name = "python"
+EOL

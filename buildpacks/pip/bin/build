@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#set -x
+set -eo pipefail
+
+echo "---> Python Pip Buildpack"
+
+# 0. GET ARGS
+layers_dir="$1"
+env_dir="$2/env"
+plan_path="$3"
+
+# 1. LOAD USER-PROVIDED BUILD-TIME ENVIRONMENT VARIABLES
+if compgen -G "${env_dir}/*" > /dev/null; then
+  for var in ${env_dir}/*; do
+    declare -x "$(basename ${var})=$(<${var})"
+  done
+fi
+
+# 2. INSTALL PIP
+echo "---> Installing pip"
+pip_layer_dir="$layers_dir/pip"
+#pypi_get_pip_url=https://bootstrap.pypa.io/get-pip.py
+pypi_get_pip_url=http://soft.ocp.zyl.io/soft/get-pip.py
+pypi_index_url=$(cat $plan_path | yj -t | jq -r '.entries[] | select(.name == "pip") | .metadata.index_url')
+
+if [[ ! -f $pip_layer_dir/bin/pip ]]; then
+    mkdir -p $pip_layer_dir/{modules,env}
+    wget -qO /tmp/get-pip.py $pypi_get_pip_url
+    python /tmp/get-pip.py -i $pypi_index_url --no-cache-dir \
+	--prefix=$pip_layer_dir --no-warn-script-location
+
+    site_packages=$(find $pip_layer_dir -name site-packages)
+    if [[ -z ${PYTHONPATH} ]]; then
+        echo -n ${site_packages} > $pip_layer_dir/env/PYTHONPATH
+    else
+        echo -n ${site_packages}:${PYTHONPATH} > ${pip_layer_dir}/env/PYTHONPATH
+    fi
+
+    cat > "${pip_layer_dir}.toml" <<EOL
+cache = true
+build = true
+launch = true
+EOL
+fi
+
+# Set env variables
+for var in ${pip_layer_dir}/env/*; do
+  declare -x "$(basename "$var")=$(<"$var")"
+done
+export PATH=${pip_layer_dir}/bin:$PATH
+
+# 3. INSTALL REQUIREMENTS
+echo "---> Installing requirements"
+local_pypi_checksum=$(sha256sum requirements.txt | cut -d ' ' -f 1) 
+remote_pypi_checksum=$(cat ${pip_layer_dir}.toml | yj -t | jq -r .metadata 2>/dev/null || echo 'not found')
+
+if [[ $local_pypi_checksum != $remote_pypi_checksum ]] ; then
+    mkdir -p $pip_layer_dir/modules
+    pip install -i $pypi_index_url -r requirements.txt -t "$pip_layer_dir/modules" \
+        --install-option="--install-scripts=$pip_layer_dir/bin" \
+        --exists-action=w --disable-pip-version-check --no-cache-dir
+
+    cat > "${pip_layer_dir}.toml" <<EOL
+cache = true
+build = true
+launch = true
+metadata = "${local_pypi_checksum}"
+EOL
+
+    if [[ -z ${PYTHONPATH} ]]; then
+        echo -n ${pip_layer_dir}/modules > $pip_layer_dir/env/PYTHONPATH
+    else
+        echo -n ${pip_layer_dir}/modules:${PYTHONPATH} > ${pip_layer_dir}/env/PYTHONPATH
+    fi
+fi

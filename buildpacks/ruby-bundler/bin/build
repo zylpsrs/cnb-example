@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+#set -x
+set -eo pipefail
+
+echo "---> Ruby Buildpack"
+
+# 0. GET ARGS
+layers_dir="$1"
+env_dir="$2/env"
+plan_path="$3"
+
+# 1. LOAD USER-PROVIDED BUILD-TIME ENVIRONMENT VARIABLES
+if compgen -G "${env_dir}/*" > /dev/null; then
+  for var in ${env_dir}/*; do
+    declare "$(basename ${var})=$(<${var})"
+  done
+fi
+
+# 2. DOWNLOAD RUBY
+echo "---> Installing Ruby"
+ruby_layer_dir="$layers_dir"/ruby
+local_ruby_version=$(cat ${ruby_layer_dir}.toml 2>/dev/null | yj -t | jq -r .metadata.version || echo 'not found')
+require_ruby_version=$(cat $plan_path | yj -t | jq -r '.entries[] | select(.name == "ruby") | .version')
+ruby_url=http://soft.ocp.zyl.io/soft/ruby-${require_ruby_version}.tgz
+
+if [[ $local_ruby_version != $require_ruby_version ]]; then
+    rm -rf "$ruby_layer_dir"
+    mkdir -p "$ruby_layer_dir"
+    wget -qO - "$ruby_url" | tar -xzf - -C "$ruby_layer_dir"
+
+  cat > "${ruby_layer_dir}.toml" << EOL
+launch = true
+build = true
+cache = true
+
+[metadata]
+version = "${require_ruby_version}"
+EOL
+fi
+
+# 3. MAKE RUBY AVAILABLE
+export PATH=$ruby_layer_dir/bin:$PATH
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}$ruby_layer_dir/lib
+
+# 4. INSTALL BUNDLER
+echo "---> Installing bundler"
+if [[ ! -f $ruby_layer_dir/bin/bundler ]]; then
+    gem sources --add https://gems.ruby-china.com/ --remove https://rubygems.org/
+    gem install bundler --no-ri --no-rdoc
+fi
+
+# 5. INSTALL GEMS
+# Compares previous Gemfile.lock checksum to the current Gemfile.lock
+bundler_layer_dir="$layers_dir/bundler"
+local_bundler_checksum=$(sha256sum Gemfile.lock | cut -d ' ' -f 1) 
+remote_bundler_checksum=$(cat "$bundler_layer_dir.toml" | yj -t | jq -r .metadata 2>/dev/null || echo 'not found')
+
+if [[ -f Gemfile.lock && $local_bundler_checksum == $remote_bundler_checksum ]] ; then
+    # Determine if no gem dependencies have changed, so it can reuse existing gems without running bundle install
+    echo "---> Reusing gems"
+    bundle config --local path "$bundler_layer_dir" >/dev/null
+    bundle config --local bin "$bundler_layer_dir/bin" >/dev/null
+else
+    # Determine if there has been a gem dependency change and install new gems to the bundler layer; 
+    # re-using existing and un-changed gems
+    echo "---> Installing gems"
+    mkdir -p "$bundler_layer_dir"
+    bundle install --path "$bundler_layer_dir" --binstubs "$bundler_layer_dir/bin"
+
+    cat > "${bundler_layer_dir}.toml" <<EOL
+cache = true
+launch = true
+metadata = "${local_bundler_checksum}"
+EOL
+fi
+
+# 6. SET DEFAULT START COMMAND
+cat >> "${layers_dir}/launch.toml" <<EOL
+[[processes]]
+type = "web"
+command = "bundle exec ruby app.rb"
+EOL

@@ -1,0 +1,6 @@
+projectKey=myproject
+serverUrl=http://sonarqube-demo-cicd.apps.ocp.zyl.io
+serverVersion=8.1.0.31237
+dashboardUrl=http://sonarqube-demo-cicd.apps.ocp.zyl.io/dashboard?id=myproject
+ceTaskId=AXI3VXg9L5KPTP2wJKbM
+ceTaskUrl=http://sonarqube-demo-cicd.apps.ocp.zyl.io/api/ce/task?id=AXI3VXg9L5KPTP2wJKbM

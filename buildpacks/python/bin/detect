@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+# 1. CHECK IF APPLICABLE 
+if [[ ! -f app.py ]]; then
+   exit 100
+fi
+
+# 2. GET ARGS
+plan_path=$2
+
+# 3. GET CONFIGURATION
+version=3.8.3
+if [[ -f .python-version ]]; then
+    version=$(cat .python-version | tr -d '[:space:]')
+fi
+
+# 4. DECLARE DEPENDENCIES
+cat >> "${plan_path}" <<EOL
+[[provides]]
+name = "python"
+
+[[requires]]
+name = "python"
+version = "${version}"
+EOL
